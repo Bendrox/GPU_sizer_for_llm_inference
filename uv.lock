@@ -3801,6 +3801,7 @@ name = "rtx-llm-engine"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "ipykernel" },
     { name = "kernel" },
     { name = "matplotlib" },
@@ -3812,6 +3813,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.136.3" },
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "kernel", specifier = ">=0.63.0" },
     { name = "matplotlib", specifier = ">=3.10.9" },
