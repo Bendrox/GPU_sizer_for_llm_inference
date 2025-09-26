@@ -1,6 +1,15 @@
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field, field_validator
 
+
+import io
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")           # backend sans interface, obligatoire côté serveur
+import matplotlib.pyplot as plt
+from fastapi.responses import StreamingResponse
+
+
 app=FastAPI(title="TensorSizer - Inference Memory API",
             description="""
     API to calculate memory needed for KV during LLM inference.
@@ -8,7 +17,20 @@ app=FastAPI(title="TensorSizer - Inference Memory API",
     Features :
     - KV Cache Calculator : Calculate the KV Cache size based on the lenght of your contexts (tokents), model's architecture , and precision for both KV cache and the model FP32, BF16 , FP8 precision
     - Max Sequence Length : Calculates the maximum context size supported by a given hardware configuration (based on GPU memory) including your language model weight.
+    - Context vs Memory Plot : Returns a PNG chart showing total VRAM (model weights + KV cache) as a function of context length, with one curve per precision (FP32, BF16, FP8) and the memory capacity of several NVIDIA GPUs (consumer and data center) drawn as reference lines.
     """,)
+
+
+GPU_VRAM_GO = { # VRAM en Go (base 1000, "sur la boîte")
+    "RTX 3090 (24)": 24,
+    "RTX 4090 (24)": 24,
+    "RTX 5090 (32)": 32,
+    "A100 (80)": 80,
+    "H100 (80)": 80,
+    "H200 (141)": 141,
+    "B200 (192)": 192,
+}
+
 
 
 class ModeParams(BaseModel):
@@ -139,6 +161,47 @@ def kv_cache_size_calculator(params:ModeParams, include_model_weights : bool = F
 def max_seq_len(p: ModeParams, vram_go: float) -> TokenResult:
         return calcul_tokens(p, vram_go)
 
+
+@app.post("/plot-context-vs-memory")
+def plot_context_vs_memory(p: ModeParams, max_tokens: int = Query(default=131072, gt=0)):
+    """Renvoie un PNG : VRAM totale (poids + KV cache) en fonction du nombre
+    de tokens, une courbe par précision, avec les capacités GPU en lignes."""
+
+    # octets par token et par précision (K + V, toutes couches)
+    per_token = 2 * p.nbr_attention_heads_kv * p.nbr_head_dim * p.nbr_Gated_Attention_layers
+    model_go = p.total_params_billion * 1_000_000_000 * p.model_quantization_oct / 1e9
+
+    tokens = np.linspace(0, max_tokens, 200)
+    precisions = {"FP32": 4, "BF16": 2, "FP8": 1}
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    for nom, oct_par_val in precisions.items():
+        vram_go = model_go + (per_token * oct_par_val * tokens) / 1e9
+        ax.plot(tokens, vram_go, linewidth=2, label=f"KV {nom} (+ poids modèle)")
+
+    for nom, cap in sorted(GPU_VRAM_GO.items(), key=lambda x: x[1]):
+        ax.axhline(cap, linestyle="--", linewidth=0.8, alpha=0.6)
+        ax.text(max_tokens, cap, f" {nom}", va="center", fontsize=8)
+
+    ax.set_xlabel("Longueur de contexte (tokens)")
+    ax.set_ylabel("VRAM totale requise (Go, base 1000)")
+    ax.set_title(f"{p.nom} — VRAM vs contexte (poids modèle = {model_go:.1f} Go)")
+    ax.legend(loc="upper left")
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, max_tokens)
+    ax.set_ylim(bottom=0)
+
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="png", dpi=110)
+    plt.close(fig)               # libère la mémoire, sinon fuite à chaque appel
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
+
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
