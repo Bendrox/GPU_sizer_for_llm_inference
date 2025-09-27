@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from schemas import ModeParams
-from plotting import render_context_vs_memory
+from app.schemas import ModeParams
+from app.plotting import render_context_vs_memory
 
 router = APIRouter(tags=["Plot"])
 

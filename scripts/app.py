@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from fastapi.responses import StreamingResponse
 
 
-app=FastAPI(title="TensorSizer - Inference Memory API",
+app=FastAPI(title="GPU Sizer - Inference Memory API",
             description="""
     API to calculate memory needed for KV during LLM inference.
     
@@ -163,7 +163,7 @@ def max_seq_len(p: ModeParams, vram_go: float) -> TokenResult:
 
 
 @app.post("/plot-context-vs-memory")
-def plot_context_vs_memory(p: ModeParams, max_tokens: int = Query(default=131072, gt=0)):
+def plot_context_vs_memory(p: ModeParams, max_tokens: int = Query(default=120000, gt=0)):
     """Renvoie un PNG : VRAM totale (poids + KV cache) en fonction du nombre
     de tokens, une courbe par précision, avec les capacités GPU en lignes."""
 

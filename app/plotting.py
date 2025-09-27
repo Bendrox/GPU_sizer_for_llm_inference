@@ -4,9 +4,9 @@ import matplotlib
 matplotlib.use("Agg")  # backend sans interface, obligatoire côté serveur
 import matplotlib.pyplot as plt
 
-from schemas import ModeParams
-from core import per_token_bytes_base
-from config import GPU_VRAM_GO
+from app.schemas import ModeParams
+from app.core import per_token_bytes_base
+from app.config import GPU_VRAM_GO
 
 
 def render_context_vs_memory(p: ModeParams, max_tokens: int) -> io.BytesIO:
@@ -24,9 +24,9 @@ def render_context_vs_memory(p: ModeParams, max_tokens: int) -> io.BytesIO:
         ax.axhline(cap, linestyle="--", linewidth=0.8, alpha=0.6)
         ax.text(max_tokens, cap, f" {nom}", va="center", fontsize=8)
 
-    ax.set_xlabel("Longueur de contexte (tokens)")
-    ax.set_ylabel("VRAM totale requise (Go, base 1000)")
-    ax.set_title(f"{p.nom} — VRAM vs contexte (poids modèle = {model_go:.1f} Go)")
+    ax.set_xlabel("Lenght of context (tokens)")
+    ax.set_ylabel("VRAM total requise (Go, base 1000)")
+    ax.set_title(f"{p.nom} — VRAM vs contexte (model weights = {model_go:.1f} Go)")
     ax.legend(loc="upper left")
     ax.grid(True, alpha=0.3)
     ax.set_xlim(0, max_tokens)

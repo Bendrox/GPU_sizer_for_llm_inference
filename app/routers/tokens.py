@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from schemas import ModeParams, TokenResult
-from core import calcul_tokens
+from app.schemas import ModeParams, TokenResult
+from app.core import calcul_tokens
 
 router = APIRouter(tags=["Tokens"])
 

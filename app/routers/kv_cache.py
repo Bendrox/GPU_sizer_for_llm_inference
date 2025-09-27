@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
-from schemas import ModeParams, KVCacheResult
-from core import calculer_kv_cache
+from app.schemas import ModeParams, KVCacheResult
+from app.core import calculer_kv_cache
 
 router = APIRouter(tags=["KV Cache"])
 

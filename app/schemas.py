@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from config import UNIT_MEMORY, UNIT_TOKENS
+from app.config import UNIT_MEMORY, UNIT_TOKENS
 
 
 class ModeParams(BaseModel):
