@@ -40,13 +40,13 @@
     "model_quantization_oct": 2
   },
   {
-    "nom": "Gemma-2-27B",
-    "editeur": "Google",
+    "nom": "Llama-3.1-405B",
+    "editeur": "Meta",
     "archi_type": "Transformer (GQA)",
     "nbr_attention_heads_kv": 16,
     "nbr_head_dim": 128,
-    "nbr_Gated_Attention_layers": 46,
-    "total_params_billion": 27,
+    "nbr_Gated_Attention_layers": 126,
+    "total_params_billion": 405,
     "model_quantization_oct": 2
   },
   {
