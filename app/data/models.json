@@ -1,0 +1,62 @@
+[
+  {
+    "nom": "Llama-3.2-1B",
+    "editeur": "Meta",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 8,
+    "nbr_head_dim": 64,
+    "nbr_Gated_Attention_layers": 16,
+    "total_params_billion": 1,
+    "model_quantization_oct": 2
+  },
+  {
+    "nom": "Llama-3.2-3B",
+    "editeur": "Meta",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 8,
+    "nbr_head_dim": 128,
+    "nbr_Gated_Attention_layers": 28,
+    "total_params_billion": 3,
+    "model_quantization_oct": 2
+  },
+  {
+    "nom": "Mistral-7B-v0.1",
+    "editeur": "Mistral AI",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 8,
+    "nbr_head_dim": 128,
+    "nbr_Gated_Attention_layers": 32,
+    "total_params_billion": 7,
+    "model_quantization_oct": 2
+  },
+  {
+    "nom": "Llama-3-8B",
+    "editeur": "Meta",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 8,
+    "nbr_head_dim": 128,
+    "nbr_Gated_Attention_layers": 32,
+    "total_params_billion": 8,
+    "model_quantization_oct": 2
+  },
+  {
+    "nom": "Gemma-2-27B",
+    "editeur": "Google",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 16,
+    "nbr_head_dim": 128,
+    "nbr_Gated_Attention_layers": 46,
+    "total_params_billion": 27,
+    "model_quantization_oct": 2
+  },
+  {
+    "nom": "Llama-3-70B",
+    "editeur": "Meta",
+    "archi_type": "Transformer (GQA)",
+    "nbr_attention_heads_kv": 8,
+    "nbr_head_dim": 128,
+    "nbr_Gated_Attention_layers": 80,
+    "total_params_billion": 70,
+    "model_quantization_oct": 2
+  }
+]
