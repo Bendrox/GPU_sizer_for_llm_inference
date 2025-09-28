@@ -49,4 +49,3 @@ units.py      bytes / MB conversions
 routers/      one file per group of endpoints
 data/         model catalog (JSON)
 ```
-## Frontend 
