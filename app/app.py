@@ -13,8 +13,8 @@ app = FastAPI(
     """,
 )
 
-app.include_router(health.router)
 app.include_router(kv_cache.router)
 app.include_router(tokens.router)
 app.include_router(plot.router)
 app.include_router(models.router)
+app.include_router(health.router)
