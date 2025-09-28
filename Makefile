@@ -6,8 +6,11 @@ install:
 run-uvicorn:  
 	uv run uvicorn app.app:app --reload
 
-run-ui: 
-	uv run streamlit run streamlit_app.py
+run-fr-ui: 
+	uv run streamlit run streamlit_app_fr.py
+
+run-eng-ui: 
+	uv run streamlit run streamlit_app_eng.py
 
 format:   
 	uv run black .
