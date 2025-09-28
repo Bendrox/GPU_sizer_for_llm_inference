@@ -3,7 +3,7 @@
 install:   
 	uv sync
 
-run-swagger:  
+run-uvicorn:  
 	uv run uvicorn app.app:app --reload
 
 run-ui: 
