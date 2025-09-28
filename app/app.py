@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from app.routers import kv_cache, tokens, plot, health, models  
 
 app = FastAPI(
-    title="GPU Sizer API for LLM Inference Memory ",
+    title="GPU Memory Sizer API for LLM Inference",
     description="""
     API to calculate memory needed for KV during LLM inference.
 

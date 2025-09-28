@@ -1,16 +1,19 @@
 .PHONY: install run format lint test
 
-install:   ## Installe les dépendances
+install:   
 	uv sync
 
-run:       ## Lance l'API (rechargement auto)
+run-swagger:  
 	uv run uvicorn app.app:app --reload
 
-format:    ## Formate avec black
+run-ui: 
+	uv run streamlit run streamlit_app.py
+
+format:   
 	uv run black .
 
-lint:      ## Analyse avec ruff
+lint:   
 	uv run ruff check .
 
-test:      ## Lance les tests
+test:  
 	uv run pytest
