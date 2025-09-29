@@ -20,7 +20,7 @@ Interactive docs are available at `/docs` once the API is running.
 ## Running
 
 ```bash
-pip install fastapi uvicorn pydantic numpy matplotlib
+uv add fastapi uvicorn pydantic numpy matplotlib
 uvicorn app.app:app --reload
 ```
 
