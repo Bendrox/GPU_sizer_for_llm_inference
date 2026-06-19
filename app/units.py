@@ -1,11 +1,11 @@
-def oct_to_mo(input: int) -> int:
-    """Octets -> Mo (base 1000). Convention 'sur la boîte' des fabricants."""
-    return input // (10**6)
+def bytes_to_mb(value: int) -> int:
+    """Bytes -> MB (base 1000). Manufacturers' 'on the box' convention."""
+    return value // (10**6)
 
 
-def oct_to_mio(input: int) -> int:
-    """Octets -> Mio (base 1024). Convention 'à l'affichage' des outils GPU."""
-    return input // (2**20)
+def bytes_to_mib(value: int) -> int:
+    """Bytes -> MiB (base 1024). The convention GPU tools display."""
+    return value // (2**20)
 
 
 def format_large_numbers(large_num: int) -> str:

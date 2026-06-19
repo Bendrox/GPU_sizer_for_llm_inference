@@ -2,33 +2,33 @@ from pydantic import BaseModel, Field, field_validator
 from app.config import UNIT_MEMORY, UNIT_TOKENS
 
 
-class ModeParams(BaseModel):
-    nom: str
-    editeur: str
-    archi_type: str
-    nbr_attention_heads_kv: int = Field(gt=0, description="Number of Attention Heads for KV")
-    nbr_head_dim: int = Field(gt=0)
-    nbr_Gated_Attention_layers: int = Field(gt=0, description="nombre de couches Gated Attention. Attention pas de DeltaNet qui n'ont pas de KV cache!")
+class ModelParams(BaseModel):
+    name: str
+    publisher: str
+    architecture: str
+    num_kv_heads: int = Field(gt=0, description="Number of key/value (KV) attention heads")
+    head_dim: int = Field(gt=0, description="Dimension of each attention head")
+    num_attention_layers: int = Field(gt=0, description="Number of attention layers. Note: exclude DeltaNet layers, which have no KV cache!")
     total_params_billion: int
-    model_quantization_oct: int = Field(default=2, description="Octets par paramètre du modèle stocké: 4=fp32, 2=bf16, 1=fp8")
+    model_quantization_bytes: int = Field(default=2, description="Bytes per stored model parameter: 4=fp32, 2=bf16, 1=fp8")
 
-    @field_validator("model_quantization_oct")
+    @field_validator("model_quantization_bytes")
     @classmethod
     def check_quant(cls, v):
         if v not in (1, 2, 4):
-            raise ValueError("Quantization doit etre 1, 2 ou 4")
+            raise ValueError("Quantization must be 1, 2, or 4")
         return v
 
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "nom": "Mistral-7B-v0.1",
-                    "editeur": "Mistral AI",
-                    "archi_type": "Transformer",
-                    "nbr_attention_heads_kv": 8,
-                    "nbr_head_dim": 128,
-                    "nbr_Gated_Attention_layers": 32,
+                    "name": "Mistral-7B-v0.1",
+                    "publisher": "Mistral AI",
+                    "architecture": "Transformer",
+                    "num_kv_heads": 8,
+                    "head_dim": 128,
+                    "num_attention_layers": 32,
                     "total_params_billion": 7,
                 }
             ]
@@ -37,12 +37,12 @@ class ModeParams(BaseModel):
 
 
 class KVCacheResult(BaseModel):
-    memory_consumption_fp32_mo: int
-    memory_consumption_bf16_mo: int
-    memory_consumption_fp8_mo: int
+    memory_consumption_fp32_mb: int
+    memory_consumption_bf16_mb: int
+    memory_consumption_fp8_mb: int
     includes_model_weights: bool = False
-    model_weights_mo: int = 0
-    kv_cache_only_mo: dict[str, int]
+    model_weights_mb: int = 0
+    kv_cache_only_mb: dict[str, int]
     unit: str = UNIT_MEMORY
 
 

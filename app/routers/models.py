@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas import ModeParams
+from app.schemas import ModelParams
 from app.catalog import CATALOG
 
 router = APIRouter(tags=["Catalog"])
@@ -7,13 +7,13 @@ router = APIRouter(tags=["Catalog"])
 
 @router.get("/models")
 def get_all_models() -> list[str]:
-    """Liste available models"""
+    """List available models."""
     return list(CATALOG.keys())
 
 
-@router.get("/models/{nom}", response_model=ModeParams)
-def get_model_config(nom: str):
-    """Compelte model config (for others endpoints)."""
-    if nom not in CATALOG:
-        raise HTTPException(status_code=404, detail=f"Modèle '{nom}' introuvable")
-    return CATALOG[nom]
+@router.get("/models/{name}", response_model=ModelParams)
+def get_model_config(name: str):
+    """Complete model config (used by the other endpoints)."""
+    if name not in CATALOG:
+        raise HTTPException(status_code=404, detail=f"Model '{name}' not found")
+    return CATALOG[name]

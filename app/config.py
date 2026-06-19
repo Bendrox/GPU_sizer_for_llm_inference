@@ -1,4 +1,4 @@
-GPU_VRAM_GO = {  # VRAM en Go (base 1000, "sur la boîte")
+GPU_VRAM_GB = {  # VRAM in GB (base 1000, "on the box")
     "RTX 3090 (24)": 24,
     "RTX 4090 (24)": 24,
     "RTX 5090 (32)": 32,
@@ -8,5 +8,5 @@ GPU_VRAM_GO = {  # VRAM en Go (base 1000, "sur la boîte")
     "B200 (192)": 192,
 }
 
-UNIT_MEMORY = "Mo (base 1000, décimale)"
+UNIT_MEMORY = "MB (base 1000, decimal)"
 UNIT_TOKENS = "tokens"

@@ -37,20 +37,20 @@ cfg = requests.get(f"{API}/models/{name}").json()
 
 with st.expander("Model architecture (editable)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    cfg["nbr_attention_heads_kv"] = c1.number_input(
-        "KV attention heads", min_value=1, value=cfg["nbr_attention_heads_kv"])
-    cfg["nbr_head_dim"] = c2.number_input(
-        "Dimension per head", min_value=1, value=cfg["nbr_head_dim"])
-    cfg["nbr_Gated_Attention_layers"] = c3.number_input(
-        "Gated Attention layers", min_value=1, value=cfg["nbr_Gated_Attention_layers"])
+    cfg["num_kv_heads"] = c1.number_input(
+        "KV attention heads", min_value=1, value=cfg["num_kv_heads"])
+    cfg["head_dim"] = c2.number_input(
+        "Dimension per head", min_value=1, value=cfg["head_dim"])
+    cfg["num_attention_layers"] = c3.number_input(
+        "Attention layers", min_value=1, value=cfg["num_attention_layers"])
 
     c4, c5 = st.columns(2)
     cfg["total_params_billion"] = c4.number_input(
         "Parameters (billions)", min_value=1, value=cfg["total_params_billion"])
     quant_label = {4: "FP32 (4)", 2: "BF16 (2)", 1: "FP8 (1)"}
-    cfg["model_quantization_oct"] = c5.selectbox(
+    cfg["model_quantization_bytes"] = c5.selectbox(
         "Weight quantization", [4, 2, 1],
-        index=[4, 2, 1].index(cfg.get("model_quantization_oct", 2)),
+        index=[4, 2, 1].index(cfg.get("model_quantization_bytes", 2)),
         format_func=lambda v: quant_label[v])
 
     st.json(cfg)
@@ -83,12 +83,12 @@ with tab_kv:
             label = "total (weights + KV)" if inc_weights else "KV cache only"
             st.markdown(f"**{label} memory**")
             m1, m2, m3 = st.columns(3)
-            m1.metric("FP32", f"{kv['memory_consumption_fp32_mo']:,} MB")
-            m2.metric("BF16", f"{kv['memory_consumption_bf16_mo']:,} MB")
-            m3.metric("FP8", f"{kv['memory_consumption_fp8_mo']:,} MB")
+            m1.metric("FP32", f"{kv['memory_consumption_fp32_mb']:,} MB")
+            m2.metric("BF16", f"{kv['memory_consumption_bf16_mb']:,} MB")
+            m3.metric("FP8", f"{kv['memory_consumption_fp8_mb']:,} MB")
 
             if kv["includes_model_weights"]:
-                st.caption(f"Model weights: {kv['model_weights_mo']:,} MB")
+                st.caption(f"Model weights: {kv['model_weights_mb']:,} MB")
             with st.expander("Raw response"):
                 st.json(kv)
 
@@ -101,7 +101,7 @@ with tab_ctx:
     if st.button("Compute max context", type="primary", key="btn_ctx"):
         r = requests.post(
             f"{API}/max-context-len-4-GPU-memory",
-            params={"vram_go": vram},
+            params={"vram_gb": vram},
             json=cfg,
         )
         if not r.ok:

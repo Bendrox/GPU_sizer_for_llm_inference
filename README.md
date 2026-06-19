@@ -10,7 +10,7 @@ The KV cache is derived from the model's architecture (KV heads, head dimension,
 |--------|-------|---------|
 | `GET`  | `/health` | Ping the API |
 | `GET`  | `/models` | List the catalog models |
-| `GET`  | `/models/{nom}` | Full config of a model |
+| `GET`  | `/models/{name}` | Full config of a model |
 | `POST` | `/kv-cache-size-calculator` | Memory for a given context (optional: + model weights, batch) |
 | `POST` | `/max-context-len-4-GPU-memory` | Number of tokens that fit in a given VRAM |
 | `POST` | `/plot-context-vs-memory` | PNG chart: total VRAM as a function of context |
@@ -33,7 +33,7 @@ A few models ship in `data/models.json` (Llama 3.x, Mistral 7B...). To add one, 
 ## 📑 Notes
 
 - Memory is in **MB base 1000** (the manufacturers' "on the box" convention), not MiB.
-- Model quantization is set via `model_quantization_oct`: `4` = FP32, `2` = BF16, `1` = FP8.
+- Model quantization is set via `model_quantization_bytes`: `4` = FP32, `2` = BF16, `1` = FP8.
 - The chart draws one curve per precision and places several NVIDIA GPU capacities (RTX 3090 → B200) as reference lines.
 
 ## Structure
