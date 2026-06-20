@@ -6,11 +6,18 @@ class ModelParams(BaseModel):
     name: str
     publisher: str
     architecture: str
-    num_kv_heads: int = Field(gt=0, description="Number of key/value (KV) attention heads")
+    num_kv_heads: int = Field(
+        gt=0, description="Number of key/value (KV) attention heads"
+    )
     head_dim: int = Field(gt=0, description="Dimension of each attention head")
-    num_attention_layers: int = Field(gt=0, description="Number of attention layers. Note: exclude DeltaNet layers, which have no KV cache!")
+    num_attention_layers: int = Field(
+        gt=0,
+        description="Number of attention layers. Note: exclude DeltaNet layers, which have no KV cache!",
+    )
     total_params_billion: int
-    model_quantization_bytes: int = Field(default=2, description="Bytes per stored model parameter: 4=fp32, 2=bf16, 1=fp8")
+    model_quantization_bytes: int = Field(
+        default=2, description="Bytes per stored model parameter: 4=fp32, 2=bf16, 1=fp8"
+    )
 
     @field_validator("model_quantization_bytes")
     @classmethod

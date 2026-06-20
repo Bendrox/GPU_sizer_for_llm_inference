@@ -19,4 +19,4 @@ lint:
 	uv run ruff check .
 
 test:  
-	uv run pytest
+	uv run pytest -v

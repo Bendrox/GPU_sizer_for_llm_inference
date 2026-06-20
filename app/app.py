@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import kv_cache, tokens, plot, health, models  
+from app.routers import kv_cache, tokens, plot, health, models
 
 app = FastAPI(
     title="GPU Memory Sizer API for LLM Inference",

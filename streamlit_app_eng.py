@@ -7,7 +7,7 @@ st.set_page_config(page_title="GPU Sizer", page_icon="🧮", layout="wide")
 st.title("🧮 GPU Sizer for LLM inference")
 
 
-#  Sidebar: API config + /health 
+#  Sidebar: API config + /health
 with st.sidebar:
     st.header("⚙️ API")
     API = st.text_input("API URL", API)
@@ -20,7 +20,7 @@ with st.sidebar:
             st.error(f"Unreachable: {e}")
 
 
-#  Loading the catalog: GET /models 
+#  Loading the catalog: GET /models
 try:
     models = requests.get(f"{API}/models", timeout=5).json()
 except requests.RequestException as e:
@@ -38,27 +38,34 @@ cfg = requests.get(f"{API}/models/{name}").json()
 with st.expander("Model architecture (editable)", expanded=False):
     c1, c2, c3 = st.columns(3)
     cfg["num_kv_heads"] = c1.number_input(
-        "KV attention heads", min_value=1, value=cfg["num_kv_heads"])
+        "KV attention heads", min_value=1, value=cfg["num_kv_heads"]
+    )
     cfg["head_dim"] = c2.number_input(
-        "Dimension per head", min_value=1, value=cfg["head_dim"])
+        "Dimension per head", min_value=1, value=cfg["head_dim"]
+    )
     cfg["num_attention_layers"] = c3.number_input(
-        "Attention layers", min_value=1, value=cfg["num_attention_layers"])
+        "Attention layers", min_value=1, value=cfg["num_attention_layers"]
+    )
 
     c4, c5 = st.columns(2)
     cfg["total_params_billion"] = c4.number_input(
-        "Parameters (billions)", min_value=1, value=cfg["total_params_billion"])
+        "Parameters (billions)", min_value=1, value=cfg["total_params_billion"]
+    )
     quant_label = {4: "FP32 (4)", 2: "BF16 (2)", 1: "FP8 (1)"}
     cfg["model_quantization_bytes"] = c5.selectbox(
-        "Weight quantization", [4, 2, 1],
+        "Weight quantization",
+        [4, 2, 1],
         index=[4, 2, 1].index(cfg.get("model_quantization_bytes", 2)),
-        format_func=lambda v: quant_label[v])
+        format_func=lambda v: quant_label[v],
+    )
 
     st.json(cfg)
 
 
-#  Tabs: one per POST endpoint 
+#  Tabs: one per POST endpoint
 tab_kv, tab_ctx, tab_plot = st.tabs(
-    ["🧠 KV cache", "📏 Max context / GPU", "📈 Context vs memory plot"])
+    ["🧠 KV cache", "📏 Max context / GPU", "📈 Context vs memory plot"]
+)
 
 
 #  POST /kv-cache-size-calculator
@@ -72,8 +79,11 @@ with tab_kv:
     if st.button("Compute KV cache", type="primary", key="btn_kv"):
         r = requests.post(
             f"{API}/kv-cache-size-calculator",
-            params={"length_seq": ctx, "batch_size": batch,
-                    "include_model_weights": inc_weights},
+            params={
+                "length_seq": ctx,
+                "batch_size": batch,
+                "include_model_weights": inc_weights,
+            },
             json=cfg,
         )
         if not r.ok:
@@ -120,7 +130,8 @@ with tab_ctx:
 with tab_plot:
     st.caption("Total VRAM (weights + KV) as a function of context, per precision.")
     max_tokens = st.number_input(
-        "Max context on X axis (tokens)", min_value=1, value=131072, step=1024)
+        "Max context on X axis (tokens)", min_value=1, value=131072, step=1024
+    )
 
     if st.button("Generate plot", type="primary", key="btn_plot"):
         r = requests.post(

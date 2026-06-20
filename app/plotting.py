@@ -1,6 +1,7 @@
 import io
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")  # headless backend, required on the server side
 import matplotlib.pyplot as plt
 
