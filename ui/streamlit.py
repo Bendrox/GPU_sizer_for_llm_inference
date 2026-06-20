@@ -4,7 +4,7 @@ import streamlit as st
 API = "http://localhost:8000"
 
 st.set_page_config(page_title="GPU Sizer", page_icon="🧮", layout="wide")
-st.title("🧮 GPU Sizer for LLM inference")
+st.title("🧮 GPU memory calculator for LLM inference")
 
 
 #  Sidebar: API config + /health
@@ -29,7 +29,7 @@ except requests.RequestException as e:
 
 
 #  Model selection + editable config
-st.subheader("📦 Model")
+st.subheader("Step 1 : Select your languague model")
 col_sel, col_quant = st.columns([2, 1])
 
 name = col_sel.selectbox("Catalog", models)
@@ -61,6 +61,7 @@ with st.expander("Model architecture (editable)", expanded=False):
 
     st.json(cfg)
 
+st.subheader("Step 2 : Run simulations ")
 
 #  Tabs: one per POST endpoint
 tab_kv, tab_ctx, tab_plot = st.tabs(

@@ -9,7 +9,6 @@ run-uvicorn:
 run-ui: 
 	uv run streamlit run ui/streamlit.py
 
-
 format:   
 	uv run black .
 
