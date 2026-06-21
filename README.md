@@ -42,25 +42,18 @@ Results are broken down across **FP32 / BF16 / FP8** so you can see the trade‑
 
 **App access :** [Hugging Face Space](https://huggingface.co/spaces/eldiablo92/GPU_memory_sizer_for_LLM_inference)
 
-## 📑 Catalog
+## Model Catalog
 
 A few models ship in `data/models.json` (Llama 3.x, Mistral 7B...). To add one, drop an entry with the same fields; they are loaded at startup.
 
-## 📑 Notes
+## Notes
 
 - Memory is in **MB base 1000** (the manufacturers' "on the box" convention), not MiB.
 - Model quantization is set via `model_quantization_bytes`: `4` = FP32, `2` = BF16, `1` = FP8.
 - The chart draws one curve per precision and places several NVIDIA GPU capacities (RTX 3090 → B200) as reference lines.
 
 
-## Development
+## CI dev
 
-```bash
-make test     # pytest -v
-make lint     # ruff check .
-make format   # black .
-```
+CI runs lint + tests on every push and PR to `main` (`.github/workflows/ci.yml`). 
 
-CI runs lint + tests on every push and PR to `main` (`.github/workflows/ci.yml`). `conftest.py` sets the repo root so `from app...` imports resolve under pytest.
-
-See `CLI_cmd.MD` for handy `nvidia-smi` / `nvtop` commands to watch real GPU load during inference.
