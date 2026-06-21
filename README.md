@@ -31,9 +31,6 @@ Results are broken down across **FP32 / BF16 / FP8** so you can see the trade‑
 | 🧠 | **KV cache calculator** | VRAM for a given context length, with optional model weights and batch size, across FP32/BF16/FP8. |
 | 📏 | **Max context for a GPU** | The number of tokens that fit in the KV cache of a card with *N* GB of VRAM. |
 | 📈 | **Context‑vs‑memory chart** | A PNG plotting total VRAM as context grows, one curve per precision, with NVIDIA card capacities (RTX 3090 → B200) drawn as reference lines. |
-| 📚 | **Model catalog** | Ready‑to‑use configs for common open models; fully editable in the UI. |
-| 🖥️ | **Web UI** | A 3‑tab Streamlit front end — no API knowledge needed. |
-| 🔌 | **REST API + OpenAPI docs** | Every feature is a documented endpoint, explorable at `/docs`. |
 
 ---
 
