@@ -58,3 +58,4 @@ class TokenResult(BaseModel):
     num_token_bf16_in_KVcache: str
     num_token_fp8_in_KVcache: str
     unit: str = UNIT_TOKENS
+    vrm_enough_for_model:bool

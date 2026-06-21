@@ -3,7 +3,7 @@ import streamlit as st
 
 API = "http://localhost:8000"
 
-st.set_page_config(page_title="GPU Sizer", page_icon="🧮", layout="wide")
+st.set_page_config(page_title="GPU memory Sizer", page_icon="🧮", layout="wide")
 st.title("🧮 GPU memory calculator for LLM inference")
 
 
@@ -71,7 +71,7 @@ tab_kv, tab_ctx, tab_plot = st.tabs(
 
 #  POST /kv-cache-size-calculator
 with tab_kv:
-    st.caption("Memory for a given context (option: + model weights, batch).")
+    st.caption("Calculate memory needed for a given context for a language model")
     c1, c2, c3 = st.columns(3)
     ctx = c1.number_input("Context (tokens)", min_value=1, value=8192, step=1024)
     batch = c2.number_input("Batch size", min_value=1, value=1)
@@ -106,23 +106,32 @@ with tab_kv:
 
 #  POST /max-context-len-4-GPU-memory
 with tab_ctx:
-    st.caption("Number of tokens storable in KV cache for a given VRAM.")
-    vram = st.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
+    st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given .")
+    c1, c2 = st.columns(2)
+    vram = c1.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
+    inc_weights = c2.checkbox("Include model weights", value=True, key="ctx_weights")
 
     if st.button("Compute max context", type="primary", key="btn_ctx"):
         r = requests.post(
             f"{API}/max-context-len-4-GPU-memory",
-            params={"vram_gb": vram},
+            params={"vram_gb": vram, "include_model_weights": inc_weights},
             json=cfg,
         )
         if not r.ok:
             st.error(r.text)
         else:
             tok = r.json()
-            m1, m2, m3 = st.columns(3)
+            m1, m2, m3, m4 = st.columns(4)
             m1.metric("FP32", f"{tok['num_token_fp32_in_KVcache']} tokens")
             m2.metric("BF16", f"{tok['num_token_bf16_in_KVcache']} tokens")
             m3.metric("FP8", f"{tok['num_token_fp8_in_KVcache']} tokens")
+            
+            if tok.get('vrm_enough_for_model'): 
+                m4.metric("Model fits in VRAM?", "Yes")
+            
+            else:
+                m4.metric("Model fits in VRAM?", "No")
+                
             with st.expander("Raw response"):
                 st.json(tok)
 
