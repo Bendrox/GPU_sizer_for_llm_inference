@@ -19,5 +19,5 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git push --force \
-            https://USER:${HF_TOKEN}@huggingface.co/spaces/<user>/<space-name> \
+            https://USER:${HF_TOKEN}@huggingface.co/spaces/eldiablo92/GPU_memory_sizer_for_LLM_inference\
             main:main
