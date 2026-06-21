@@ -1,3 +1,14 @@
+---
+title: GPU Sizer For LLM Inference
+emoji: 🖥️
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+license: mit
+pinned: false
+---
+
 # 🖥️🟩 GPU Memory Sizer API for LLM Inference
 
 A small API to estimate the VRAM needed for LLM inference: KV cache size, the maximum context that fits on a given card, and a VRAM-vs-context chart.
