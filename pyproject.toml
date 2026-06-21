@@ -1,7 +1,7 @@
 [project]
-name = "rtx-llm-engine"
+name = "GPU_memory_sizer_for_LLM_inference"
 version = "0.1.0"
-description = "Add your description here"
+description = "Estimate the **VRAM** an LLM needs for inference — KV cache, model weights, the longest context that fits on a given card, and a VRAM‑vs‑context chart — from the model's attention architecture alone."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

@@ -17,3 +17,9 @@ lint:
 
 test:  
 	uv run pytest -v
+
+build-localy:
+	docker build -t gpu-sizer .
+
+launch-localy: 
+	docker run --rm -p 7860:7860 gpu-sizer

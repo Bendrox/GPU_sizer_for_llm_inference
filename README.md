@@ -1,9 +1,8 @@
 ---
-title: GPU Sizer For LLM Inference
+title: GPU Memory Sizer for LLM Inference
 emoji: 🖥️
 sdk: docker
 app_port: 7860
-pinned: false
 ---
 
 # 🖥️🟩 GPU Memory Sizer API for LLM Inference
