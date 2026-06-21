@@ -5,9 +5,10 @@
 
 # 1. Lancement de l'API (FastAPI via Uvicorn)
 # - '--host 0.0.0.0' : Rend l'API accessible depuis l'extérieur du conteneur/hôte.
-# & Lance le processus en arrière-plan pour permettre au script de continuer.
+# + Lance le processus en arrière-plan pour permettre au script de continuer.
+# --no-sync  optim dit a uv « n'essaie pas de resynchroniser, utilise l'env déjà installé au build ».
 echo "[INFO] Démarrage de l'API Uvicorn en arriere plan sur le port 8000..."
-uv run uvicorn app.app:app --host 0.0.0.0 --port 8000 &
+uv run --no-sync uvicorn app.app:app --host 0.0.0.0 --port 8000 &
 
 
 # 2. Lancement de l'Interface Utilisateur (Streamlit)
@@ -16,7 +17,7 @@ uv run uvicorn app.app:app --host 0.0.0.0 --port 8000 &
 #            for Graceful Shutdown 
 # server.headless true Désactive l'ouverture automatique du navigateur
 echo "[INFO] Démarrage de l'application Streamlit sur le port 7860..."
-exec uv run streamlit run ui/streamlit.py \
+exec uv run --no-sync streamlit run ui/streamlit.py \
   --server.port 7860 \
   --server.address 0.0.0.0 \
   --server.headless true
