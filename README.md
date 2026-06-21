@@ -8,31 +8,39 @@ pinned: false
 
 # 🖥️🟩 GPU Memory Sizer API for LLM Inference
 
-A small API to estimate the VRAM needed for LLM inference: KV cache size, the maximum context that fits on a given card, and a VRAM-vs-context chart.
+Estimate the **VRAM** an LLM needs for inference — KV cache, model weights, the longest context that fits on a given card, and a VRAM‑vs‑context chart — from the model's attention architecture alone.
 
 The KV cache is derived from the model's architecture (KV heads, head dimension, number of attention layers) and reported for FP32, BF16 and FP8. You can also add the model weights to get the total memory actually used.
 
-## 🔌 Endpoints
+## Why this exists
 
-| Method | Route | Purpose |
-|--------|-------|---------|
-| `GET`  | `/health` | Ping the API |
-| `GET`  | `/models` | List the catalog models |
-| `GET`  | `/models/{name}` | Full config of a model |
-| `POST` | `/kv-cache-size-calculator` | Memory for a given context (optional: + model weights, batch) |
-| `POST` | `/max-context-len-4-GPU-memory` | Number of tokens that fit in a given VRAM |
-| `POST` | `/plot-context-vs-memory` | PNG chart: total VRAM as a function of context |
+Picking hardware for LLM serving means answering three recurring questions:
 
-Interactive docs are available at `/docs` once the API is running.
+1. **How much VRAM** does my model need at a given context length and batch size?
+2. **What's the longest context** I can serve on the GPU I already have?
+3. **Where's the cliff** — at what context length does the KV cache overflow the card?
 
-## 🏃 Running
+This tool answers all three from a model's attention shape (`num_kv_heads`, `head_dim`, `num_attention_layers`) and parameter count — no weights to download, no GPU required to run the estimate. 
 
-```bash
-uv add fastapi uvicorn pydantic numpy matplotlib
-uvicorn app.app:app --reload
-```
+Results are broken down across **FP32 / BF16 / FP8** so you can see the trade‑off of KV‑cache quantization at a glance.
 
-The folder holding the code must be importable as `app` (imports use `from app...`).
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| 🧠 | **KV cache calculator** | VRAM for a given context length, with optional model weights and batch size, across FP32/BF16/FP8. |
+| 📏 | **Max context for a GPU** | The number of tokens that fit in the KV cache of a card with *N* GB of VRAM. |
+| 📈 | **Context‑vs‑memory chart** | A PNG plotting total VRAM as context grows, one curve per precision, with NVIDIA card capacities (RTX 3090 → B200) drawn as reference lines. |
+| 📚 | **Model catalog** | Ready‑to‑use configs for common open models; fully editable in the UI. |
+| 🖥️ | **Web UI** | A 3‑tab Streamlit front end — no API knowledge needed. |
+| 🔌 | **REST API + OpenAPI docs** | Every feature is a documented endpoint, explorable at `/docs`. |
+
+---
+
+
+## Access 
+
+**App access :** [Hugging Face Space](https://huggingface.co/spaces/eldiablo92/GPU_memory_sizer_for_LLM_inference)
 
 ## 📑 Catalog
 
@@ -44,16 +52,15 @@ A few models ship in `data/models.json` (Llama 3.x, Mistral 7B...). To add one, 
 - Model quantization is set via `model_quantization_bytes`: `4` = FP32, `2` = BF16, `1` = FP8.
 - The chart draws one curve per precision and places several NVIDIA GPU capacities (RTX 3090 → B200) as reference lines.
 
-## Structure
 
+## Development
+
+```bash
+make test     # pytest -v
+make lint     # ruff check .
+make format   # black .
 ```
-app.py        FastAPI entry point
-core.py       KV cache / token calculations
-plotting.py   chart generation
-catalog.py    model loading
-config.py     GPU capacities and units
-schemas.py    Pydantic models
-units.py      bytes / MB conversions
-routers/      one file per group of endpoints
-data/         model catalog (JSON)
-```
+
+CI runs lint + tests on every push and PR to `main` (`.github/workflows/ci.yml`). `conftest.py` sets the repo root so `from app...` imports resolve under pytest.
+
+See `CLI_cmd.MD` for handy `nvidia-smi` / `nvtop` commands to watch real GPU load during inference.
