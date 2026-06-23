@@ -3,6 +3,18 @@ import streamlit as st
 
 API = "http://localhost:8000"
 
+# GPU catalog -> VRAM in GB (manufacturer 'on the box' convention, base 1000)
+GPUS = {
+    "NVIDIA H200 (141 GB)": 141.0,
+    "NVIDIA H100 (80 GB)": 80.0,
+    "NVIDIA A100 (40 GB)": 40.0,
+    "NVIDIA RTX A6000 (48 GB)": 48.0,
+    "NVIDIA V100 (32 GB)": 32.0,
+    "NVIDIA L4 (24 GB)": 24.0,
+    "NVIDIA RTX 4090 (24 GB)": 24.0,
+    "NVIDIA RTX 3090 (24 GB)": 24.0,
+}
+
 st.set_page_config(page_title="GPU memory Sizer", page_icon="🧮", layout="wide")
 st.title("🧮 GPU memory calculator for LLM inference")
 
@@ -121,9 +133,21 @@ with tab_kv:
 
 #  POST /max-context-len-4-GPU-memory
 with tab_ctx:
-    st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given .")
+    st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given model.")
+
+    source = st.radio(
+        "VRAM source",
+        ["Memory amount", "GPU from list"],
+        horizontal=True,
+        key="ctx_source",
+    )
     c1, c2 = st.columns(2)
-    vram = c1.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
+    if source == "Memory amount":
+        vram = c1.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
+    else:
+        gpu = c1.selectbox("GPU", list(GPUS), key="ctx_gpu")
+        vram = GPUS[gpu]
+        c1.caption(f"VRAM: {vram:g} GB")
     inc_weights = c2.checkbox("Include model weights", value=True, key="ctx_weights")
 
     if st.button("Compute max context", type="primary", key="btn_ctx"):
