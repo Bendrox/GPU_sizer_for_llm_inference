@@ -91,15 +91,30 @@ with tab_kv:
             st.error(r.text)
         else:
             kv = r.json()
-            label = "total (weights + KV)" if inc_weights else "KV cache only"
-            st.markdown(f"**{label} memory**")
-            m1, m2, m3 = st.columns(3)
-            m1.metric("FP32", f"{kv['memory_consumption_fp32_mb']:,} MB")
-            m2.metric("BF16", f"{kv['memory_consumption_bf16_mb']:,} MB")
-            m3.metric("FP8", f"{kv['memory_consumption_fp8_mb']:,} MB")
+            kv_only = kv["kv_cache_only_mb"]
+            weights = kv["model_weights_mb"]
+            totals = kv["totals_mb"]
+            inc = kv["includes_model_weights"]
+            quants = ("fp32", "bf16", "fp8")
 
-            if kv["includes_model_weights"]:
-                st.caption(f"Model weights: {kv['model_weights_mb']:,} MB")
+            st.markdown(
+                "**Total memory (weights + KV) in MB**" if inc else "**KV cache only (MB)**"
+            )
+
+            if inc:
+                for wq in quants:
+                    st.markdown(f"##### Model **{wq.upper()}** · weights {weights[wq]:,} MB")
+                    cols = st.columns(3)
+                    for col, kvq in zip(cols, quants):
+                        col.metric(
+                            f"KV {kvq.upper()}",
+                            f"{kv_only[kvq]:,} → {totals[wq][kvq]:,} MB",
+                        )
+            else:
+                cols = st.columns(3)
+                for col, kvq in zip(cols, quants):
+                    col.metric(f"KV {kvq.upper()}", f"{kv_only[kvq]:,} MB")
+
             with st.expander("Raw response"):
                 st.json(kv)
 

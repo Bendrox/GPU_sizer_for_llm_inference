@@ -9,6 +9,10 @@ run-uvicorn:
 run-ui: 
 	uv run streamlit run ui/streamlit.py
 
+run-all: 
+	uv run uvicorn app.app:app --reload & \
+	uv run streamlit run ui/streamlit.py
+
 format:   
 	uv run black .
 

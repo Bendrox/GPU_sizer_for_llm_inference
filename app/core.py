@@ -13,26 +13,38 @@ def compute_kv_cache(
     include_model_weights: bool = False,
     batch_size: int = 1,
 ) -> KVCacheResult:
-    """KV cache for `length_seq` tokens, in MB, for FP32/BF16/FP8.
-    If include_model_weights, add the model weights (according to its quantization)."""
+    """KV cache for `length_seq` tokens, in MB. Returns a matrix `totals_mb`:
+    one row per model-weight quantization (FP32/BF16/FP8), and for each row the 3
+    KV-cache levels according to their own quantization."""
     elements = per_token_bytes_base(p) * length_seq * batch_size
+    params = p.total_params_billion * 1_000_000_000
+    quant_bytes = {"fp32": 4, "bf16": 2, "fp8": 1}
 
-    kv_only = {
-        "fp32": bytes_to_mb(elements * 4),
-        "bf16": bytes_to_mb(elements * 2),
-        "fp8": bytes_to_mb(elements * 1),
+    kv_only = {q: bytes_to_mb(elements * b) for q, b in quant_bytes.items()}
+
+    weights_bytes = (
+        {q: params * b for q, b in quant_bytes.items()}
+        if include_model_weights
+        else {q: 0 for q in quant_bytes}
+    )
+
+    # rows = model-weight quantization, columns = KV-cache quantization
+    totals_mb = {
+        wq: {
+            kvq: bytes_to_mb(elements * kvb + weights_bytes[wq])
+            for kvq, kvb in quant_bytes.items()
+        }
+        for wq in quant_bytes
     }
 
-    model_bytes = p.total_params_billion * 1_000_000_000 * p.model_quantization_bytes
-    model_weights = model_bytes if include_model_weights else 0
-
     return KVCacheResult(
-        memory_consumption_fp32_mb=bytes_to_mb(elements * 4 + model_weights),
-        memory_consumption_bf16_mb=bytes_to_mb(elements * 2 + model_weights),
-        memory_consumption_fp8_mb=bytes_to_mb(elements * 1 + model_weights),
+        memory_consumption_fp32_mb=totals_mb["fp32"]["fp32"],
+        memory_consumption_bf16_mb=totals_mb["bf16"]["bf16"],
+        memory_consumption_fp8_mb=totals_mb["fp8"]["fp8"],
         includes_model_weights=include_model_weights,
-        model_weights_mb=bytes_to_mb(model_bytes),
+        model_weights_mb={k: bytes_to_mb(v) for k, v in weights_bytes.items()},
         kv_cache_only_mb=kv_only,
+        totals_mb=totals_mb,
     )
 
 

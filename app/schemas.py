@@ -48,8 +48,11 @@ class KVCacheResult(BaseModel):
     memory_consumption_bf16_mb: int
     memory_consumption_fp8_mb: int
     includes_model_weights: bool = False
-    model_weights_mb: int = 0
+    model_weights_mb: dict[str, int] = Field(
+        default_factory=lambda: {"fp32": 0, "bf16": 0, "fp8": 0}
+    )
     kv_cache_only_mb: dict[str, int]
+    totals_mb: dict[str, dict[str, int]] = Field(default_factory=dict)
     unit: str = UNIT_MEMORY
 
 
