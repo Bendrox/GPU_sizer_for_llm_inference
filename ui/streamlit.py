@@ -1,3 +1,5 @@
+import altair as alt
+import pandas as pd
 import requests
 import streamlit as st
 
@@ -99,36 +101,67 @@ with tab_kv:
             },
             json=cfg,
         )
+        # Keep the result so the chart/table survive reruns (e.g. the table toggle)
+        st.session_state["kv_result"] = r.json() if r.ok else None
         if not r.ok:
             st.error(r.text)
-        else:
-            kv = r.json()
-            kv_only = kv["kv_cache_only_mb"]
-            weights = kv["model_weights_mb"]
-            totals = kv["totals_mb"]
-            inc = kv["includes_model_weights"]
-            quants = ("fp32", "bf16", "fp8")
 
-            st.markdown(
-                "**Total memory (weights + KV) in MB**" if inc else "**KV cache only (MB)**"
+    kv = st.session_state.get("kv_result")
+    if kv:
+        kv_only = kv["kv_cache_only_mb"]
+        weights = kv["model_weights_mb"]
+        totals = kv["totals_mb"]
+        quants = ["fp32", "bf16", "fp8"]
+        labels = {"fp32": "FP32", "bf16": "BF16", "fp8": "FP8"}
+        order = ["FP32", "BF16", "FP8"]  # quantization increases left -> right
+
+        if kv["includes_model_weights"]:
+            rows = [
+                {"Model": labels[w], "KV": labels[k], "Component": comp, "GB": gb, "rank": rank}
+                for w in quants
+                for k in quants
+                for comp, gb, rank in (
+                    ("Model weights", weights[w] / 1000, 0),
+                    ("KV cache", kv_only[k] / 1000, 1),
+                )
+            ]
+            chart = (
+                alt.Chart(pd.DataFrame(rows))
+                .mark_bar()
+                .encode(
+                    x=alt.X("Model:N", sort=order, title="Model precision  (quantization →)"),
+                    xOffset=alt.XOffset("KV:N", sort=order),
+                    y=alt.Y("GB:Q", title="VRAM (GB)"),
+                    color=alt.Color(
+                        "Component:N",
+                        title="",
+                        scale=alt.Scale(
+                            domain=["Model weights", "KV cache"],
+                            range=["#4C78A8", "#F58518"],
+                        ),
+                    ),
+                    order=alt.Order("rank:Q"),
+                    tooltip=["Model", "KV", "Component", alt.Tooltip("GB:Q", format=".2f")],
+                )
             )
+            st.altair_chart(chart, use_container_width=True)
+            st.caption("Per model group: 3 bars (KV FP32/BF16/FP8) · blue = weights, orange = KV cache")
 
-            if inc:
-                for wq in quants:
-                    st.markdown(f"##### Model **{wq.upper()}** · weights {weights[wq]:,} MB")
-                    cols = st.columns(3)
-                    for col, kvq in zip(cols, quants):
-                        col.metric(
-                            f"KV {kvq.upper()}",
-                            f"{kv_only[kvq]:,} → {totals[wq][kvq]:,} MB",
-                        )
-            else:
-                cols = st.columns(3)
-                for col, kvq in zip(cols, quants):
-                    col.metric(f"KV {kvq.upper()}", f"{kv_only[kvq]:,} MB")
+            if st.toggle("Show table", key="kv_table"):
+                table = {"Weights (GB)": {labels[w]: weights[w] / 1000 for w in quants}}
+                for k in quants:
+                    table[f"Total · KV {labels[k]} (GB)"] = {
+                        labels[w]: totals[w][k] / 1000 for w in quants
+                    }
+                st.dataframe(pd.DataFrame(table).style.format("{:.1f}"))
+        else:
+            df = pd.DataFrame({"KV cache (MB)": [kv_only[k] for k in quants]}, index=order)
+            st.bar_chart(df, x_label="KV cache precision", y_label="MB")
+            if st.toggle("Show table", key="kv_table"):
+                st.dataframe(df)
 
-            with st.expander("Raw response"):
-                st.json(kv)
+        with st.expander("Raw response"):
+            st.json(kv)
 
 
 #  POST /max-context-len-4-GPU-memory
@@ -137,12 +170,12 @@ with tab_ctx:
 
     source = st.radio(
         "VRAM source",
-        ["Memory amount", "GPU from list"],
+        ["Input the Memory amount", "List of GPU"],
         horizontal=True,
         key="ctx_source",
     )
     c1, c2 = st.columns(2)
-    if source == "Memory amount":
+    if source == "Input the Memory amount":
         vram = c1.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
     else:
         gpu = c1.selectbox("GPU", list(GPUS), key="ctx_gpu")
