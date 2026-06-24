@@ -17,6 +17,36 @@ GPUS = {
     "NVIDIA RTX 3090 (24 GB)": 24.0,
 }
 
+
+def vram_donut(weights_gb: float, kv_gb: float, center: str):
+    """Donut showing the model-weights vs KV-cache share of VRAM, with a centered label."""
+    src = pd.DataFrame(
+        {"Component": ["Model weights", "KV cache"], "GB": [weights_gb, kv_gb]}
+    )
+    ring = (
+        alt.Chart(src)
+        .mark_arc(innerRadius=55, outerRadius=90)
+        .encode(
+            theta=alt.Theta("GB:Q", stack=True),
+            color=alt.Color(
+                "Component:N",
+                scale=alt.Scale(
+                    domain=["Model weights", "KV cache"],
+                    range=["#4C78A8", "#F58518"],
+                ),
+                legend=alt.Legend(orient="bottom", title=None),
+            ),
+            tooltip=["Component", alt.Tooltip("GB:Q", format=".1f")],
+        )
+    )
+    label = (
+        alt.Chart(pd.DataFrame({"t": [center]}))
+        .mark_text(fontSize=16, fontWeight="bold")
+        .encode(text="t:N")
+    )
+    return (ring + label).properties(height=240)
+
+
 st.set_page_config(page_title="GPU memory Sizer", page_icon="🧮", layout="wide")
 st.title("🧮 GPU memory calculator for LLM inference")
 
@@ -169,19 +199,26 @@ with tab_ctx:
     st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given model.")
 
     source = st.radio(
-        "VRAM source",
+        "VRAM Input",
         ["Input the Memory amount", "List of GPU"],
         horizontal=True,
         key="ctx_source",
     )
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     if source == "Input the Memory amount":
         vram = c1.number_input("Available VRAM (GB)", min_value=1.0, value=24.0, step=1.0)
     else:
         gpu = c1.selectbox("GPU", list(GPUS), key="ctx_gpu")
         vram = GPUS[gpu]
         c1.caption(f"VRAM: {vram:g} GB")
-    inc_weights = c2.checkbox("Include model weights", value=True, key="ctx_weights")
+    cfg["model_quantization_bytes"] = c2.selectbox(
+        "Model weight quantization",
+        [4, 2, 1],
+        index=[4, 2, 1].index(cfg.get("model_quantization_bytes", 2)),
+        format_func=lambda v: quant_label[v],
+        key="ctx_quant",
+    )
+    inc_weights = c3.checkbox("Include model weights", value=True, key="ctx_weights")
 
     if st.button("Compute max context", type="primary", key="btn_ctx"):
         r = requests.post(
@@ -193,17 +230,35 @@ with tab_ctx:
             st.error(r.text)
         else:
             tok = r.json()
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("FP32", f"{tok['num_token_fp32_in_KVcache']} tokens")
-            m2.metric("BF16", f"{tok['num_token_bf16_in_KVcache']} tokens")
-            m3.metric("FP8", f"{tok['num_token_fp8_in_KVcache']} tokens")
-            
-            if tok.get('vrm_enough_for_model'): 
-                m4.metric("Model fits in VRAM?", "Yes")
-            
-            else:
-                m4.metric("Model fits in VRAM?", "No")
-                
+            labels = {"fp32": "FP32", "bf16": "BF16", "fp8": "FP8"}
+            tokens = {
+                "fp32": tok["num_token_fp32_in_KVcache"],
+                "bf16": tok["num_token_bf16_in_KVcache"],
+                "fp8": tok["num_token_fp8_in_KVcache"],
+            }
+
+            weights_gb = (
+                cfg["total_params_billion"] * cfg["model_quantization_bytes"]
+                if inc_weights
+                else 0
+            )
+            kv_gb = max(vram - weights_gb, 0)
+
+            if not tok.get("vrm_enough_for_model"):
+                st.warning("Model weights exceed the available VRAM — it does not fit.")
+            st.caption(
+                f"VRAM {vram:g} GB · model weights {weights_gb:g} GB · free for KV cache {kv_gb:g} GB"
+            )
+
+            # one donut per KV-cache quantization: weights vs KV share, tokens in the center
+            for col, q in zip(st.columns(3), ["fp32", "bf16", "fp8"]):
+                col.markdown(f"**KV {labels[q]}**")
+                col.altair_chart(
+                    vram_donut(weights_gb, kv_gb, tokens[q]),
+                    use_container_width=True,
+                )
+                col.caption("max tokens in KV cache")
+
             with st.expander("Raw response"):
                 st.json(tok)
 
