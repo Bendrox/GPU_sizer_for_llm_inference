@@ -18,11 +18,29 @@ GPUS = {
 }
 
 
-def vram_donut(weights_gb: float, kv_gb: float, center: str):
-    """Donut showing the model-weights vs KV-cache share of VRAM, with a centered label."""
-    src = pd.DataFrame(
-        {"Component": ["Model weights", "KV cache"], "GB": [weights_gb, kv_gb]}
-    )
+def with_overhead(mem_mb: float, frag: float, fixed_mb: int) -> int:
+    """Estimated real allocation: int((kv_mb + weights_mb) * (1 + frag)) + fixed_overhead_mb."""
+    return int(mem_mb * (1 + frag)) + fixed_mb
+
+
+def overhead_controls(key: str):
+    """Checkbox + params for the CUDA overhead estimate. Returns (enabled, frag, fixed_mb)."""
+    on = st.checkbox("Add estimated CUDA overhead", key=f"ovh_{key}")
+    frag, fixed = 0.0, 0
+    if on:
+        a, b = st.columns(2)
+        frag = a.number_input("Fragmentation factor", 0.0, 1.0, 0.07, 0.01, key=f"frag_{key}")
+        fixed = b.number_input("Fixed overhead (MB)", 0, 16000, 750, 50, key=f"fix_{key}")
+        st.caption("real_mb = `int((kv_mb + weights_mb) * (1 + frag)) + fixed_overhead_mb`")
+    return on, float(frag), int(fixed)
+
+
+def vram_donut(weights_gb: float, kv_gb: float, center: str, overhead_gb: float = 0.0):
+    """Donut: model-weights vs KV-cache (+ optional CUDA overhead) share of VRAM."""
+    comps = [("Model weights", weights_gb), ("KV cache", kv_gb)]
+    if overhead_gb > 0:
+        comps.append(("CUDA overhead", overhead_gb))
+    src = pd.DataFrame({"Component": [c for c, _ in comps], "GB": [g for _, g in comps]})
     ring = (
         alt.Chart(src)
         .mark_arc(innerRadius=55, outerRadius=90)
@@ -31,8 +49,8 @@ def vram_donut(weights_gb: float, kv_gb: float, center: str):
             color=alt.Color(
                 "Component:N",
                 scale=alt.Scale(
-                    domain=["Model weights", "KV cache"],
-                    range=["#4C78A8", "#F58518"],
+                    domain=["Model weights", "KV cache", "CUDA overhead"],
+                    range=["#4C78A8", "#F58518", "#B0B0B0"],
                 ),
                 legend=alt.Legend(orient="bottom", title=None),
             ),
@@ -120,6 +138,7 @@ with tab_kv:
     ctx = c1.number_input("Context (tokens)", min_value=1, value=8192, step=1024)
     batch = c2.number_input("Batch size", min_value=1, value=1)
     inc_weights = c3.checkbox("Include model weights", value=True)
+    ovh, frag, fixed = overhead_controls("kv")
 
     if st.button("Compute KV cache", type="primary", key="btn_kv"):
         r = requests.post(
@@ -146,15 +165,17 @@ with tab_kv:
         order = ["FP32", "BF16", "FP8"]  # quantization increases left -> right
 
         if kv["includes_model_weights"]:
-            rows = [
-                {"Model": labels[w], "KV": labels[k], "Component": comp, "GB": gb, "rank": rank}
-                for w in quants
-                for k in quants
-                for comp, gb, rank in (
-                    ("Model weights", weights[w] / 1000, 0),
-                    ("KV cache", kv_only[k] / 1000, 1),
-                )
-            ]
+            rows = []
+            for w in quants:
+                for k in quants:
+                    base = weights[w] + kv_only[k]
+                    parts = [("Model weights", weights[w], 0), ("KV cache", kv_only[k], 1)]
+                    if ovh:
+                        parts.append(("CUDA overhead", with_overhead(base, frag, fixed) - base, 2))
+                    rows += [
+                        {"Model": labels[w], "KV": labels[k], "Component": c, "GB": mb / 1000, "rank": rk}
+                        for c, mb, rk in parts
+                    ]
             chart = (
                 alt.Chart(pd.DataFrame(rows))
                 .mark_bar()
@@ -166,8 +187,8 @@ with tab_kv:
                         "Component:N",
                         title="",
                         scale=alt.Scale(
-                            domain=["Model weights", "KV cache"],
-                            range=["#4C78A8", "#F58518"],
+                            domain=["Model weights", "KV cache", "CUDA overhead"],
+                            range=["#4C78A8", "#F58518", "#B0B0B0"],
                         ),
                     ),
                     order=alt.Order("rank:Q"),
@@ -181,11 +202,19 @@ with tab_kv:
                 table = {"Weights (GB)": {labels[w]: weights[w] / 1000 for w in quants}}
                 for k in quants:
                     table[f"Total · KV {labels[k]} (GB)"] = {
-                        labels[w]: totals[w][k] / 1000 for w in quants
+                        labels[w]: (
+                            with_overhead(weights[w] + kv_only[k], frag, fixed)
+                            if ovh
+                            else totals[w][k]
+                        )
+                        / 1000
+                        for w in quants
                     }
                 st.dataframe(pd.DataFrame(table).style.format("{:.1f}"))
         else:
             df = pd.DataFrame({"KV cache (MB)": [kv_only[k] for k in quants]}, index=order)
+            if ovh:
+                df["+ CUDA overhead (MB)"] = [with_overhead(kv_only[k], frag, fixed) for k in quants]
             st.bar_chart(df, x_label="KV cache precision", y_label="MB")
             if st.toggle("Show table", key="kv_table"):
                 st.dataframe(df)
@@ -219,11 +248,14 @@ with tab_ctx:
         key="ctx_quant",
     )
     inc_weights = c3.checkbox("Include model weights", value=True, key="ctx_weights")
+    ovh, frag, fixed = overhead_controls("ctx")
 
     if st.button("Compute max context", type="primary", key="btn_ctx"):
+        # CUDA overhead reserves VRAM, so the budget for weights + KV shrinks
+        vram_budget = max(vram * 1000 - fixed, 0) / (1 + frag) / 1000
         r = requests.post(
             f"{API}/max-context-len-4-GPU-memory",
-            params={"vram_gb": vram, "include_model_weights": inc_weights},
+            params={"vram_gb": vram_budget, "include_model_weights": inc_weights},
             json=cfg,
         )
         if not r.ok:
@@ -242,19 +274,22 @@ with tab_ctx:
                 if inc_weights
                 else 0
             )
-            kv_gb = max(vram - weights_gb, 0)
+            overhead_gb = vram - vram_budget
+            kv_gb = max(vram_budget - weights_gb, 0)
 
             if not tok.get("vrm_enough_for_model"):
                 st.warning("Model weights exceed the available VRAM — it does not fit.")
             st.caption(
-                f"VRAM {vram:g} GB · model weights {weights_gb:g} GB · free for KV cache {kv_gb:g} GB"
+                f"VRAM {vram:g} GB · weights {weights_gb:g} GB"
+                + (f" · CUDA overhead {overhead_gb:.1f} GB" if ovh else "")
+                + f" · free for KV cache {kv_gb:.1f} GB"
             )
 
             # one donut per KV-cache quantization: weights vs KV share, tokens in the center
             for col, q in zip(st.columns(3), ["fp32", "bf16", "fp8"]):
                 col.markdown(f"**KV {labels[q]}**")
                 col.altair_chart(
-                    vram_donut(weights_gb, kv_gb, tokens[q]),
+                    vram_donut(weights_gb, kv_gb, tokens[q], overhead_gb if ovh else 0.0),
                     use_container_width=True,
                 )
                 col.caption("max tokens in KV cache")
@@ -269,11 +304,12 @@ with tab_plot:
     max_tokens = st.number_input(
         "Max context on X axis (tokens)", min_value=1, value=131072, step=1024
     )
+    ovh, frag, fixed = overhead_controls("plot")
 
     if st.button("Generate plot", type="primary", key="btn_plot"):
         r = requests.post(
             f"{API}/plot-context-vs-memory",
-            params={"max_tokens": max_tokens},
+            params={"max_tokens": max_tokens, "frag": frag, "fixed_overhead_mb": fixed},
             json=cfg,
         )
         if not r.ok:
