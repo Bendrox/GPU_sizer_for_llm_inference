@@ -1,4 +1,4 @@
-from app.schemas import ModelParams, KVCacheResult, TokenResult
+from app.schemas import ModelParams, KVCacheResult, TokenResult, VLLMResult
 from app.units import bytes_to_mb, format_large_numbers
 
 
@@ -75,3 +75,45 @@ def compute_max_tokens(p: ModelParams, vram_gb: float, include_model_weights: bo
             ),
             vrm_enough_for_model=True
         )
+
+
+def compute_vllm_capacity(
+    p: ModelParams,
+    total_vram_gb: float,
+    seq_len: int,
+    gpu_memory_utilization: float = 0.9,
+    block_size: int = 16,
+) -> VLLMResult:
+    """vLLM-style sizing: usable VRAM = total * utilization, weights loaded first,
+    the rest paged into KV blocks of `block_size` tokens (PagedAttention)."""
+    usable_bytes = int(total_vram_gb * 1_000_000_000 * gpu_memory_utilization)
+    weights_bytes = p.total_params_billion * 1_000_000_000 * p.model_quantization_bytes
+    kv_bytes = usable_bytes - weights_bytes
+
+    if kv_bytes <= 0:  # weights alone don't fit in the usable VRAM
+        return VLLMResult(
+            fits=False,
+            usable_vram_mb=bytes_to_mb(usable_bytes),
+            weights_mb=bytes_to_mb(weights_bytes),
+            kv_cache_mb=0,
+            block_size=block_size,
+            num_blocks=0,
+            total_tokens=0,
+            blocks_per_request=0,
+            max_concurrent_requests=0,
+        )
+
+    block_bytes = per_token_bytes_base(p) * p.model_quantization_bytes * block_size
+    num_blocks = kv_bytes // block_bytes
+    blocks_per_request = -(-seq_len // block_size)  # ceil
+    return VLLMResult(
+        fits=True,
+        usable_vram_mb=bytes_to_mb(usable_bytes),
+        weights_mb=bytes_to_mb(weights_bytes),
+        kv_cache_mb=bytes_to_mb(kv_bytes),
+        block_size=block_size,
+        num_blocks=num_blocks,
+        total_tokens=num_blocks * block_size,
+        blocks_per_request=blocks_per_request,
+        max_concurrent_requests=num_blocks // blocks_per_request,
+    )

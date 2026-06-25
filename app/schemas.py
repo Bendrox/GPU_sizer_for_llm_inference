@@ -62,3 +62,16 @@ class TokenResult(BaseModel):
     num_token_fp8_in_KVcache: str
     unit: str = UNIT_TOKENS
     vrm_enough_for_model:bool
+
+
+class VLLMResult(BaseModel):
+    fits: bool
+    usable_vram_mb: int
+    weights_mb: int
+    kv_cache_mb: int
+    block_size: int
+    num_blocks: int
+    total_tokens: int
+    blocks_per_request: int
+    max_concurrent_requests: int
+    unit: str = UNIT_MEMORY

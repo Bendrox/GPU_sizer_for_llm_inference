@@ -126,8 +126,8 @@ with st.expander("Model architecture (editable)", expanded=False):
 st.subheader("Step 2 : Run simulations ")
 
 #  Tabs: one per POST endpoint
-tab_kv, tab_ctx, tab_plot = st.tabs(
-    ["🧠 KV cache", "📏 Max context / GPU", "📈 Context vs memory plot"]
+tab_kv, tab_ctx, tab_plot, tab_vllm = st.tabs(
+    ["🧠 KV cache", "📏 Max context / GPU", "📈 Context vs memory plot", "🚀 vLLM simulation"]
 )
 
 
@@ -316,3 +316,50 @@ with tab_plot:
             st.error(r.text)
         else:
             st.image(r.content, caption=f"{name} — context vs memory")
+
+
+#  POST /vllm-capacity
+with tab_vllm:
+    st.caption("vLLM-style capacity: usable VRAM = total × utilization, KV cache paged in blocks of 16 tokens.")
+
+    source = st.radio(
+        "VRAM Input", ["Input the Memory amount", "List of GPU"], horizontal=True, key="vllm_source"
+    )
+    c1, c2, c3 = st.columns(3)
+    if source == "Input the Memory amount":
+        vram = c1.number_input("Total VRAM (GB)", min_value=1.0, value=80.0, step=1.0, key="vllm_vram")
+    else:
+        gpu = c1.selectbox("GPU", list(GPUS), key="vllm_gpu")
+        vram = GPUS[gpu]
+        c1.caption(f"VRAM: {vram:g} GB")
+    util = c2.slider("GPU memory utilization", 0.10, 1.00, 0.90, 0.05, key="vllm_util")
+    seq_len = c3.number_input("Sequence length per request (tokens)", min_value=1, value=8192, step=512, key="vllm_seq")
+
+    if st.button("Run vLLM simulation", type="primary", key="btn_vllm"):
+        r = requests.post(
+            f"{API}/vllm-capacity",
+            params={"total_vram_gb": vram, "seq_len": seq_len, "gpu_memory_utilization": util},
+            json=cfg,
+        )
+        if not r.ok:
+            st.error(r.text)
+        else:
+            v = r.json()
+            if not v["fits"]:
+                st.error(
+                    f"❌ Model weights ({v['weights_mb'] / 1000:.1f} GB) don't fit in usable VRAM "
+                    f"({v['usable_vram_mb'] / 1000:.1f} GB = {util:.0%} of {vram:g} GB). "
+                    "Pick a bigger GPU, raise utilization, or quantize the model further."
+                )
+            else:
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Concurrent requests", f"{v['max_concurrent_requests']:,}", help=f"at seq_len = {seq_len:,}")
+                m2.metric("KV blocks (×16 tok)", f"{v['num_blocks']:,}")
+                m3.metric("Total KV tokens", f"{v['total_tokens']:,}")
+                st.caption(
+                    f"Usable VRAM {v['usable_vram_mb'] / 1000:.1f} GB ({util:.0%} of {vram:g} GB) · "
+                    f"weights {v['weights_mb'] / 1000:.1f} GB · KV cache {v['kv_cache_mb'] / 1000:.1f} GB · "
+                    f"{v['blocks_per_request']} blocks/request"
+                )
+            with st.expander("Raw response"):
+                st.json(v)
