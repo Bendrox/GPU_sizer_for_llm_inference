@@ -58,5 +58,65 @@
     "num_attention_layers": 80,
     "total_params_billion": 70,
     "model_quantization_bytes": 2
+  },
+  {
+    "name": "Qwen3-4B",
+    "publisher": "Alibaba (Qwen)",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 8,
+    "head_dim": 128,
+    "num_attention_layers": 36,
+    "total_params_billion": 4,
+    "model_quantization_bytes": 2
+  },
+  {
+    "name": "Qwen3-8B",
+    "publisher": "Alibaba (Qwen)",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 8,
+    "head_dim": 128,
+    "num_attention_layers": 36,
+    "total_params_billion": 8,
+    "model_quantization_bytes": 2
+  },
+  {
+    "name": "Qwen3-14B",
+    "publisher": "Alibaba (Qwen)",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 8,
+    "head_dim": 128,
+    "num_attention_layers": 40,
+    "total_params_billion": 14,
+    "model_quantization_bytes": 2
+  },
+  {
+    "name": "Qwen3-32B",
+    "publisher": "Alibaba (Qwen)",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 8,
+    "head_dim": 128,
+    "num_attention_layers": 64,
+    "total_params_billion": 32,
+    "model_quantization_bytes": 2
+  },
+  {
+    "name": "Qwen2.5-7B",
+    "publisher": "Alibaba (Qwen)",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 4,
+    "head_dim": 128,
+    "num_attention_layers": 28,
+    "total_params_billion": 7,
+    "model_quantization_bytes": 2
+  },
+  {
+    "name": "Mistral-Small-24B",
+    "publisher": "Mistral AI",
+    "architecture": "Transformer (GQA)",
+    "num_kv_heads": 8,
+    "head_dim": 128,
+    "num_attention_layers": 40,
+    "total_params_billion": 24,
+    "model_quantization_bytes": 2
   }
 ]

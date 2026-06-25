@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import altair as alt
 import pandas as pd
 import requests
@@ -5,17 +7,7 @@ import streamlit as st
 
 API = "http://localhost:8000"
 
-# GPU catalog -> VRAM in GB (manufacturer 'on the box' convention, base 1000)
-GPUS = {
-    "NVIDIA H200 (141 GB)": 141.0,
-    "NVIDIA H100 (80 GB)": 80.0,
-    "NVIDIA A100 (40 GB)": 40.0,
-    "NVIDIA RTX A6000 (48 GB)": 48.0,
-    "NVIDIA V100 (32 GB)": 32.0,
-    "NVIDIA L4 (24 GB)": 24.0,
-    "NVIDIA RTX 4090 (24 GB)": 24.0,
-    "NVIDIA RTX 3090 (24 GB)": 24.0,
-}
+ABOUT = Path(__file__).parent / "about"  # static help texts, one .md per feature
 
 
 def with_overhead(mem_mb: float, frag: float, fixed_mb: int) -> int:
@@ -89,6 +81,9 @@ except requests.RequestException as e:
     st.error(f"Unable to load models from {API}: {e}")
     st.stop()
 
+#  GPU catalog: GET /gpus (served by the backend, single source of truth)
+GPUS = requests.get(f"{API}/gpus", timeout=5).json()
+
 
 #  Model selection + editable config
 st.subheader("Step 1 : Select your languague model")
@@ -136,29 +131,7 @@ with tab_kv:
     st.caption("Calculate memory needed for a given context for a language model")
 
     with st.expander("ℹ️ About KV cache"):
-        st.markdown(
-            """
-**What it does.** Estimates the **KV cache** memory for a given context, for the **same model
-declined in 3 precisions** (FP32/BF16/FP8). The KV cache stores the Keys and Values of every
-past token so they are not recomputed at each step; it grows linearly with context and batch.
-
-**Parameters**
-- **Context (tokens)** — sequence length; the KV cache grows linearly with it.
-- **Batch size** — number of sequences in parallel; multiplies the KV cache.
-- **Include model weights** — also add the model size (per precision) to get the total VRAM.
-- **Add estimated CUDA overhead** — inflate the total by a fragmentation factor plus a fixed overhead.
-"""
-        )
-        st.code(
-            "bytes_per_token = 2 × num_kv_heads × head_dim × num_layers\n"
-            "kv_cache_bytes  = bytes_per_token × context × batch × kv_dtype_bytes\n"
-            "weights_bytes   = params_billion × 1e9 × weight_bytes\n"
-            "total           = kv_cache_bytes + weights_bytes\n"
-            "\n"
-            "# optional CUDA overhead\n"
-            "real = int((kv_mb + weights_mb) × (1 + frag)) + fixed_overhead_mb",
-            language="text",
-        )
+        st.markdown((ABOUT / "kv.md").read_text(encoding="utf-8"))
 
     c1, c2, c3 = st.columns(3)
     ctx = c1.number_input("Context (tokens)", min_value=1, value=8192, step=1024)
@@ -254,28 +227,7 @@ with tab_ctx:
     st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given model.")
 
     with st.expander("ℹ️ About Max context / GPU"):
-        st.markdown(
-            """
-**What it does.** The **inverse** of the KV cache tab: given a GPU's VRAM, it computes **how many
-tokens fit** in the KV cache once the model weights are loaded, for each KV precision
-(FP32/BF16/FP8). The donuts show the weights vs KV-cache share of VRAM, with the token count in
-the center.
-
-**Parameters**
-- **VRAM source** — type an amount in GB, or pick a GPU from the list.
-- **Model weight quantization** — precision of the weights; larger weights leave less room for the KV cache.
-- **Include model weights** — subtract the model size from VRAM before counting tokens.
-- **Add estimated CUDA overhead** — reserve VRAM (fragmentation + fixed) before counting.
-"""
-        )
-        st.code(
-            "vram_bytes      = vram_gb × 1e9\n"
-            "weights_bytes   = params_billion × 1e9 × weight_bytes   # if included\n"
-            "available       = vram_bytes − weights_bytes            # if < 0: does not fit\n"
-            "bytes_per_token = 2 × num_kv_heads × head_dim × num_layers\n"
-            "max_tokens      = available // (bytes_per_token × kv_dtype_bytes)",
-            language="text",
-        )
+        st.markdown((ABOUT / "ctx.md").read_text(encoding="utf-8"))
 
     source = st.radio(
         "VRAM Input",
@@ -373,37 +325,7 @@ with tab_vllm:
     st.caption("vLLM-style capacity: usable VRAM = total × utilization, KV cache paged in blocks of 16 tokens.")
 
     with st.expander("ℹ️ About vLLM"):
-        st.markdown(
-            """
-**What is vLLM.** A high-throughput LLM inference engine. Its key idea is **PagedAttention**:
-the KV cache is split into small fixed-size **blocks of 16 tokens**, allocated on demand. This
-cuts memory waste and lets the GPU serve many requests at once. This tab estimates **how many
-concurrent requests** a GPU can hold for a given request length.
-
-**Parameters**
-- **GPU memory utilization** *(default 0.9)* — fraction of total VRAM vLLM may use; the rest is left for CUDA context and fragmentation. Higher = more room for KV cache, but riskier.
-- **Sequence length per request** — tokens (prompt + generated) one request occupies; longer sequences cost more blocks, so fewer fit.
-- **Model weight quantization** — precision of the weights (FP32=4, BF16=2, FP8=1 bytes). Lower → smaller model → more VRAM left for KV cache.
-- **KV cache dtype** — precision of the KV cache, set **independently** from the weights (vLLM's `kv_cache_dtype`). FP8 KV roughly doubles capacity vs BF16; defaults to the model's precision (like `auto`).
-
-**Quantization, in short.** Quantizing the **weights** frees VRAM by shrinking the model.
-Quantizing the **KV cache** shrinks the per-token cost, so each request holds more tokens. The two are independent.
-"""
-        )
-        st.code(
-            "usable_vram   = total_vram × gpu_memory_utilization\n"
-            "weights_bytes = params_billion × 1e9 × weight_bytes\n"
-            "kv_bytes      = usable_vram − weights_bytes        # if ≤ 0: does not fit\n"
-            "\n"
-            "bytes_per_token = 2 × num_kv_heads × head_dim × num_layers × kv_dtype_bytes\n"
-            "block_bytes     = bytes_per_token × 16             # 16 tokens / block\n"
-            "\n"
-            "num_blocks          = kv_bytes // block_bytes\n"
-            "total_kv_tokens     = num_blocks × 16\n"
-            "blocks_per_request  = ceil(seq_len / 16)\n"
-            "concurrent_requests = num_blocks // blocks_per_request",
-            language="text",
-        )
+        st.markdown((ABOUT / "vllm.md").read_text(encoding="utf-8"))
 
     source = st.radio(
         "VRAM Input", ["Input the Memory amount", "List of GPU"], horizontal=True, key="vllm_source"
