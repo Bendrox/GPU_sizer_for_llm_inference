@@ -7,7 +7,7 @@ import streamlit as st
 
 API = "http://localhost:8000"
 
-ABOUT = Path(__file__).parent / "about"  # static help texts, one .md per feature
+ABOUT = Path(__file__).parent / "about"
 
 
 def with_overhead(mem_mb: float, frag: float, fixed_mb: int) -> int:
@@ -55,6 +55,14 @@ def vram_donut(weights_gb: float, kv_gb: float, center: str, overhead_gb: float 
         .encode(text="t:N")
     )
     return (ring + label).properties(height=240)
+
+
+def about(feature: str, what_title: str):
+    """Two homogeneous help sections per feature: the concept, then the technical detail."""
+    with st.expander(f"{what_title}"):
+        st.markdown((ABOUT / f"{feature}_concept.md").read_text(encoding="utf-8"))
+    with st.expander("Technical implementation"):
+        st.markdown((ABOUT / f"{feature}_tech.md").read_text(encoding="utf-8"))
 
 
 st.set_page_config(page_title="GPU memory Sizer", page_icon="🧮", layout="wide")
@@ -118,20 +126,18 @@ with st.expander("Model architecture (editable)", expanded=False):
 
     st.json(cfg)
 
-st.subheader("Step 2 : Run simulations ")
+st.subheader("Step 2 : Run a simulation")
 
 #  Tabs: one per POST endpoint
 tab_kv, tab_ctx, tab_plot, tab_vllm = st.tabs(
-    ["🧠 KV cache", "📏 Max context / GPU", "📈 Context vs memory plot", "🚀 vLLM simulation"]
+    ["KV cache", "Max context per GPU", "Context vs memory plot", "vLLM simulation"]
 )
 
 
 #  POST /kv-cache-size-calculator
 with tab_kv:
     st.caption("Calculate memory needed for a given context for a language model")
-
-    with st.expander("ℹ️ About KV cache"):
-        st.markdown((ABOUT / "kv.md").read_text(encoding="utf-8"))
+    about("kv", "What is the KV cache?")
 
     c1, c2, c3 = st.columns(3)
     ctx = c1.number_input("Context (tokens)", min_value=1, value=8192, step=1024)
@@ -225,9 +231,7 @@ with tab_kv:
 #  POST /max-context-len-4-GPU-memory
 with tab_ctx:
     st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given model.")
-
-    with st.expander("ℹ️ About Max context / GPU"):
-        st.markdown((ABOUT / "ctx.md").read_text(encoding="utf-8"))
+    about("ctx", "What is max context per GPU sizing?")
 
     source = st.radio(
         "VRAM Input",
@@ -303,6 +307,7 @@ with tab_ctx:
 #  POST /plot-context-vs-memory
 with tab_plot:
     st.caption("Total VRAM (weights + KV) as a function of context, per precision.")
+    about("plot", "What is the context-vs-memory plot?")
     max_tokens = st.number_input(
         "Max context on X axis (tokens)", min_value=1, value=131072, step=1024
     )
@@ -323,9 +328,7 @@ with tab_plot:
 #  POST /vllm-capacity
 with tab_vllm:
     st.caption("vLLM-style capacity: usable VRAM = total × utilization, KV cache paged in blocks of 16 tokens.")
-
-    with st.expander("ℹ️ About vLLM"):
-        st.markdown((ABOUT / "vllm.md").read_text(encoding="utf-8"))
+    about("vllm", "What is vLLM?")
 
     source = st.radio(
         "VRAM Input", ["Input the Memory amount", "List of GPU"], horizontal=True, key="vllm_source"
@@ -373,7 +376,7 @@ with tab_vllm:
             v = r.json()
             if not v["fits"]:
                 st.error(
-                    f"❌ Model weights ({v['weights_mb'] / 1000:.1f} GB) don't fit in usable VRAM "
+                    f"Model weights ({v['weights_mb'] / 1000:.1f} GB) don't fit in usable VRAM !"
                     f"({v['usable_vram_mb'] / 1000:.1f} GB = {util:.0%} of {vram:g} GB). "
                     "Pick a bigger GPU, raise utilization, or quantize the model further."
                 )

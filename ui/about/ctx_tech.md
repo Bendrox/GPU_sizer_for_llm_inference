@@ -1,8 +1,3 @@
-**What it does.** The **inverse** of the KV cache tab: given a GPU's VRAM, it computes **how many
-tokens fit** in the KV cache once the model weights are loaded, for each KV precision
-(FP32/BF16/FP8). The donuts show the weights vs KV-cache share of VRAM, with the token count in
-the center.
-
 **Parameters**
 - **VRAM source** — type an amount in GB, or pick a GPU from the list.
 - **Model weight quantization** — precision of the weights; larger weights leave less room for the KV cache.

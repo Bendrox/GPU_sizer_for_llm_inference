@@ -1,7 +1,3 @@
-**What it does.** Estimates the **KV cache** memory for a given context, for the **same model
-declined in 3 precisions** (FP32/BF16/FP8). The KV cache stores the Keys and Values of every
-past token so they are not recomputed at each step; it grows linearly with context and batch.
-
 **Parameters**
 - **Context (tokens)** — sequence length; the KV cache grows linearly with it.
 - **Batch size** — number of sequences in parallel; multiplies the KV cache.
