@@ -335,10 +335,31 @@ with tab_vllm:
     util = c2.slider("GPU memory utilization", 0.10, 1.00, 0.90, 0.05, key="vllm_util")
     seq_len = c3.number_input("Sequence length per request (tokens)", min_value=1, value=8192, step=512, key="vllm_seq")
 
+    c4, c5 = st.columns(2)
+    cfg["model_quantization_bytes"] = c4.selectbox(
+        "Model weight quantization",
+        [4, 2, 1],
+        index=[4, 2, 1].index(cfg.get("model_quantization_bytes", 2)),
+        format_func=lambda v: quant_label[v],
+        key="vllm_quant",
+    )
+    kv_dtype = c5.selectbox(
+        "KV cache dtype",
+        [4, 2, 1],
+        index=[4, 2, 1].index(cfg["model_quantization_bytes"]),
+        format_func=lambda v: quant_label[v],
+        key="vllm_kv_dtype",
+    )
+
     if st.button("Run vLLM simulation", type="primary", key="btn_vllm"):
         r = requests.post(
             f"{API}/vllm-capacity",
-            params={"total_vram_gb": vram, "seq_len": seq_len, "gpu_memory_utilization": util},
+            params={
+                "total_vram_gb": vram,
+                "seq_len": seq_len,
+                "gpu_memory_utilization": util,
+                "kv_dtype_bytes": kv_dtype,
+            },
             json=cfg,
         )
         if not r.ok:
@@ -356,6 +377,10 @@ with tab_vllm:
                 m1.metric("Concurrent requests", f"{v['max_concurrent_requests']:,}", help=f"at seq_len = {seq_len:,}")
                 m2.metric("KV blocks (×16 tok)", f"{v['num_blocks']:,}")
                 m3.metric("Total KV tokens", f"{v['total_tokens']:,}")
+                st.caption(
+                    f"Model weights {quant_label[cfg['model_quantization_bytes']]} · "
+                    f"KV cache dtype {quant_label[kv_dtype]}"
+                )
                 st.caption(
                     f"Usable VRAM {v['usable_vram_mb'] / 1000:.1f} GB ({util:.0%} of {vram:g} GB) · "
                     f"weights {v['weights_mb'] / 1000:.1f} GB · KV cache {v['kv_cache_mb'] / 1000:.1f} GB · "

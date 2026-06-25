@@ -83,9 +83,12 @@ def compute_vllm_capacity(
     seq_len: int,
     gpu_memory_utilization: float = 0.9,
     block_size: int = 16,
+    kv_dtype_bytes: int | None = None,
 ) -> VLLMResult:
     """vLLM-style sizing: usable VRAM = total * utilization, weights loaded first,
-    the rest paged into KV blocks of `block_size` tokens (PagedAttention)."""
+    the rest paged into KV blocks of `block_size` tokens (PagedAttention).
+    `kv_dtype_bytes` sets the KV cache precision (defaults to the model's)."""
+    kv_dtype_bytes = kv_dtype_bytes or p.model_quantization_bytes
     usable_bytes = int(total_vram_gb * 1_000_000_000 * gpu_memory_utilization)
     weights_bytes = p.total_params_billion * 1_000_000_000 * p.model_quantization_bytes
     kv_bytes = usable_bytes - weights_bytes
@@ -103,7 +106,7 @@ def compute_vllm_capacity(
             max_concurrent_requests=0,
         )
 
-    block_bytes = per_token_bytes_base(p) * p.model_quantization_bytes * block_size
+    block_bytes = per_token_bytes_base(p) * kv_dtype_bytes * block_size
     num_blocks = kv_bytes // block_bytes
     blocks_per_request = -(-seq_len // block_size)  # ceil
     return VLLMResult(

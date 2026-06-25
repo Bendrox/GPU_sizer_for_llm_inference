@@ -12,7 +12,8 @@ def vllm_capacity(
     seq_len: int = Query(gt=0),
     gpu_memory_utilization: float = Query(default=0.9, gt=0, le=1),
     block_size: int = Query(default=16, gt=0),
+    kv_dtype_bytes: int = Query(default=2, gt=0),
 ):
     return compute_vllm_capacity(
-        params, total_vram_gb, seq_len, gpu_memory_utilization, block_size
+        params, total_vram_gb, seq_len, gpu_memory_utilization, block_size, kv_dtype_bytes
     )
