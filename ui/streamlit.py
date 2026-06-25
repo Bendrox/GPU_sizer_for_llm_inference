@@ -136,7 +136,7 @@ tab_kv, tab_ctx, tab_plot, tab_vllm = st.tabs(
 
 #  POST /kv-cache-size-calculator
 with tab_kv:
-    st.caption("Calculate memory needed for a given context for a language model")
+    st.caption("Make an estimation of needed memory for your **language model declined in 3 precisions** (FP32 / BF16 / FP8), the precision of the KV Cache needed, the lenght of your context, your batch size and the Cuda overhead to make it more realistic.")
     about("kv", "What is the KV cache?")
 
     c1, c2, c3 = st.columns(3)
@@ -230,7 +230,7 @@ with tab_kv:
 
 #  POST /max-context-len-4-GPU-memory
 with tab_ctx:
-    st.caption("Number of tokens storable in your GPU (VRAM) KV cache for a given model.")
+    st.caption("Make an estimation of your max possible context (number of tokens) choosing your language model declined in 3 precisions (FP32 / BF16 / FP8), the precision of the KV Cache needed, your batch size and the Cuda overhead to make it more realistic and your available memory or GPU model.")
     about("ctx", "What is max context per GPU sizing?")
 
     source = st.radio(
@@ -284,7 +284,7 @@ with tab_ctx:
             kv_gb = max(vram_budget - weights_gb, 0)
 
             if not tok.get("vrm_enough_for_model"):
-                st.warning("Model weights exceed the available VRAM — it does not fit.")
+                st.warning("It does not fit ! Model weights exceed the available VRAM. Please change model, quantization level or upgrade your GPU")
             st.caption(
                 f"VRAM {vram:g} GB · weights {weights_gb:g} GB"
                 + (f" · CUDA overhead {overhead_gb:.1f} GB" if ovh else "")
